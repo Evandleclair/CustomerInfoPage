@@ -1,0 +1,242 @@
+﻿@page "/"
+@inject HttpClient Http
+
+
+<PageTitle>Index</PageTitle>
+
+<h1>Customer Data Search</h1>
+<div class="text-center bg-blue-100">
+    <div class="btn-group">
+        <button class="btn btn-primary" @onclick="searchButtonEvent">Click To Search</button>
+        <button class="btn btn-primary" @onclick="clearResultsEvent">Clear Results</button>
+    </div>
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+               border-blue-300" @bind-value="searchTable[0,1]"
+           @bind-value:event="oninput" placeholder="First Name" />
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+                 border-blue-300" @bind-value="searchTable[1,1]"
+           @bind-value:event="oninput" placeholder="Last Name" />
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+                 border-blue-300" @bind-value="searchTable[2,1]"
+           @bind-value:event="oninput" placeholder="Phone Number" />
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+                 border-blue-300" @bind-value="searchTable[3,1]"
+           @bind-value:event="oninput" placeholder="Address Line 1" />
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+                 border-blue-300" @bind-value="searchTable[4,1]"
+           @bind-value:event="oninput" placeholder="Address Line 2" />
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+                 border-blue-300" @bind-value="searchTable[5,1]"
+           @bind-value:event="oninput" placeholder="City" />
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+                 border-blue-300" @bind-value="searchTable[6,1]"
+           @bind-value:event="oninput" placeholder="State" />
+    <button class="btn btn-primary" @onclick="clearFiltersEvent">Clear Filters</button>
+
+</div>
+
+<div class="text-center bg-blue-100">
+ 
+    <input type="checkbox" id="exactMatchBox" name="exactMatchCheckBox" checked="@findExactMatch" @onchange="checkboxChangedEvent">
+    <label for="exactMatchBox">Show only exact matches</label>
+</div>
+
+<br>
+
+<hr />
+
+<body>
+    @if (customerList == null)
+    {
+        @if (loadingTextShow == true)
+        {
+            <p><em>Loading Data...</em></p>
+        }
+    }
+    else
+    {
+    
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Phone Number</th>
+                    <th>Address Line 1</th>
+                    <th>Address Line 2</th>
+                    <th>City</th>
+                    <th>State</th>
+
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in customerList)
+                {
+                    <tr>
+                        <td>@customer.firstName</td>
+                        <td>@customer.lastName</td>
+                        <td>@customer.phoneNumber</td>
+                        <td>@customer.address1</td>
+                        <td>@customer.address2</td>
+                        <td>@customer.city</td>
+                        <td>@customer.state</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</body>
+
+@code{
+    private custInfo[]? customerList; //a list of customer objects. Nullable so it can be easily overwritten//
+    private bool loadingTextShow = false; //whether we will show the placeholder "loading" text//
+    private String dataLocation = "dataDirectory/customers.json";
+    private bool findExactMatch = false; //variable that determines if we only search for exact matches//
+    string[,] searchTable = new string[7,2]; //I would have used Dictionary but it was not cooperated with the HTML formatting.//
+    Dictionary<string, string> searchValues = new Dictionary<string, string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        updateSearchFilters(); //create our search conditions array, and fill it with default values//
+    }
+
+    /// <summary>
+    /// Object that stores all the customer info together for easy access.
+    /// </summary>
+    public class custInfo
+    {
+        public String firstName { get; set; }
+
+        public String lastName { get; set; }
+
+        public String phoneNumber { get; set; }
+
+        public String address1 { get; set; }
+
+        public string? address2 { get; set; }
+
+        public String city { get; set; }
+
+        public String state { get; set; }
+
+    }
+
+    /// <summary>
+    /// //this event is fired when the search button is pressed. It shows the loading text, then tries to get the customer data, then informs the website of the state change.//
+    /// </summary>
+    private async void searchButtonEvent()
+    {
+        loadingTextShow = true;
+        try
+        {
+            customerList = filteredList(await Http.GetFromJsonAsync<custInfo[]>(dataLocation));
+        }
+        catch
+        {
+            customerList = null; //if we fail to get data for whatever reason, null the array.//
+        }
+    StateHasChanged();
+    }
+
+    /// <summary>
+    /// This class turns our customer array into a list, filters it, then turns it back into an array to be fed to the table in the webpage proper. It changes based on the value
+    /// of our "exact match" checkbox.
+    /// </summary>
+    private custInfo[]? filteredList(custInfo[]? inputArray)
+    {
+        List<custInfo> obList = inputArray.ToList();
+
+        //if the exact match is true, we want all characters to match the respective contents of our search array.//
+        try
+        {
+            if (findExactMatch == true)
+            {
+                var result = from o in obList
+                             where (searchTable[0, 1].Replace(" ", "") == "" || stripFormatting(o.firstName) == stripFormatting(searchTable[0, 1]))
+                             && (searchTable[1, 1].Replace(" ", "") == "" || stripFormatting(o.lastName) == stripFormatting(searchTable[1, 1]))
+                             && (searchTable[2, 1].Replace(" ", "") == "" || stripFormatting(o.phoneNumber) == stripFormatting(searchTable[2, 1]))
+                             && (searchTable[3, 1].Replace(" ", "") == "" || stripFormatting(o.address1) == stripFormatting(searchTable[3, 1]))
+                             && (searchTable[4, 1].Replace(" ", "") == "" || stripFormatting(o.address2) == stripFormatting(searchTable[4, 1]))
+                             && (searchTable[5, 1].Replace(" ", "") == "" || stripFormatting(o.city) == stripFormatting(searchTable[5, 1]))
+                             && (searchTable[6, 1].Replace(" ", "") == "" || stripFormatting(o.state) == stripFormatting(searchTable[6, 1]))
+                             select o;
+                return result.ToArray();
+            }
+            else //otherwise, we can use string.contains as we want to find partial matches.//
+            {
+                var result = from o in obList
+                             where (searchTable[0, 1].Replace(" ", "") == "" || stripFormatting(o.firstName).Contains(stripFormatting(searchTable[0, 1])))
+                             && (searchTable[1, 1].Replace(" ", "") == "" || stripFormatting(o.lastName).Contains(stripFormatting(searchTable[1, 1])))
+                             && (searchTable[2, 1].Replace(" ", "") == "" || stripFormatting(o.phoneNumber).Contains(stripFormatting(searchTable[2, 1])))
+                             && (searchTable[3, 1].Replace(" ", "") == "" || stripFormatting(o.address1).Contains(stripFormatting(searchTable[3, 1])))
+                             && (searchTable[4, 1].Replace(" ", "") == "" || stripFormatting(o.address2).Contains(stripFormatting(searchTable[4, 1])))
+                             && (searchTable[5, 1].Replace(" ", "") == "" || stripFormatting(o.city).Contains(stripFormatting(searchTable[5, 1])))
+                             && (searchTable[6, 1].Replace(" ", "") == "" || stripFormatting(o.state).Contains(stripFormatting(searchTable[6, 1])))
+                             select o;
+                return result.ToArray();
+            }
+        }
+        catch
+        {
+            return null; //
+        }
+    }
+
+    /// <summary>
+    /// This is used both to set the intial search table values, and to reset them as needed. While the actual names of the values in column 0 are not strictly
+    /// required, they help improve code readability and can be of help when debugging. A dictionary was considered for use instead but it did not play nice with value binding. 
+    /// </summary>
+    private void updateSearchFilters()
+    {
+        searchTable[0, 0] = "First Name";
+        searchTable[0, 1] = "";
+        searchTable[1, 0] = "Last Name";
+        searchTable[1, 1] = "";
+        searchTable[2, 0] = "Phone Number";
+        searchTable[2, 1] = "";
+        searchTable[3, 0] = "Address 1";
+        searchTable[3, 1] = "";
+        searchTable[4, 0] = "Address 2";
+        searchTable[4, 1] = "";
+        searchTable[5, 0] = "City";
+        searchTable[5, 1] = "";
+        searchTable[6, 0] = "State";
+        searchTable[6, 1] = "";
+    }
+
+    ///<summary>
+    ///This nulls the customerList array and resets our loading bar status.//
+    ///</summary>
+    private void clearResultsEvent()
+    {
+        loadingTextShow = false;
+        customerList = null;
+        StateHasChanged();
+    }
+
+    ///<summary>
+    /// Used to clear out the text filter boxes. all it does is invoke the set/reset function updateSearchFilters, and then inform the webpage of a state change.
+    ///is called by a button
+    ///</summary>
+    private void clearFiltersEvent()
+    {
+        updateSearchFilters();
+        StateHasChanged();
+    }
+
+    ///<summary>
+    /// Occurs whenever the checkbox gets changed. Inverts the value of the "exact match" boolean. 
+    ///</summary>
+    private void checkboxChangedEvent()
+    {
+        findExactMatch = !findExactMatch;
+    }
+    ///<summary>
+    /// A function used for readabilities sake. A prettier way to remove casing and whitespace without having to type it out every time.
+    ///<summary>
+    private String stripFormatting(String s)
+    {
+        return s.ToLower().Replace(" ", ""); 
+    }
+   
+}

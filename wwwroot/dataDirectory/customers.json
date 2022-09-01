@@ -1,0 +1,38 @@
+[
+  {
+    "firstName": "John",
+    "lastName": "Smith",
+    "address1": "112 Suburbia Street",
+    "address2": "",
+    "phoneNumber": "5552033333",
+    "city": "Portland",
+    "state": "ME"
+  },
+  {
+    "firstName": "Jerry",
+    "lastName": "Seinfeld",
+    "address1": "129 West 81st Street",
+    "address2": "Apt. 5A",
+    "phoneNumber": "5552034506",
+    "city": "New York City",
+    "state": "NY"
+  },
+  {
+    "firstName": "Joe",
+    "lastName": "Doe",
+    "address1": "103 One Street",
+    "address2": "",
+    "phoneNumber": "5551234567",
+    "city": "Traverse City",
+    "state": "MI"
+  },
+  {
+    "firstName": "Snake",
+    "lastName": "Pliskin",
+    "address1": "123 Place Street",
+    "address2": "Apt. B5",
+    "phoneNumber": "5551551555",
+    "city": "New York City",
+    "state": "NY"
+  }
+]
